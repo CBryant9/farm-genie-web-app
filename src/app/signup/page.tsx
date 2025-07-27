@@ -57,8 +57,8 @@ export default function SignupPage() {
 
       if (authData.user) {
         console.log('User created successfully:', authData.user)
-        // Redirect to dashboard on successful signup
-        router.push('/dashboard')
+        // Redirect to login page after successful signup
+        router.push('/login?message=Account created successfully! Please sign in.')
       }
     } catch (err) {
       console.error('Signup error:', err)

@@ -6,8 +6,21 @@ import { supabase } from '@/lib/supabase'
 export default function TestPage() {
   const [status, setStatus] = useState('Testing connection...')
   const [error, setError] = useState<string | null>(null)
+  const [envStatus, setEnvStatus] = useState('Checking...')
 
   useEffect(() => {
+    // Check environment variables on client side
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (url && key) {
+      setEnvStatus('✅ Environment variables loaded')
+    } else {
+      setEnvStatus('❌ Environment variables missing')
+      setStatus('❌ Configuration error')
+      return
+    }
+
     async function testConnection() {
       try {
         // Test basic connection by getting auth session
@@ -47,8 +60,7 @@ export default function TestPage() {
           
           <div className="p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded">
             <p className="font-medium">Environment Variables:</p>
-            <p className="text-sm">URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing'}</p>
-            <p className="text-sm">Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing'}</p>
+            <p className="text-sm">{envStatus}</p>
           </div>
         </div>
       </div>

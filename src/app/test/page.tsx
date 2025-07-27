@@ -10,8 +10,8 @@ export default function TestPage() {
   useEffect(() => {
     async function testConnection() {
       try {
-        // Test basic connection
-        const { data, error } = await supabase.from('auth.users').select('count').limit(1)
+        // Test basic connection by getting auth session
+        const { data, error } = await supabase.auth.getSession()
         
         if (error) {
           setError(`Connection error: ${error.message}`)

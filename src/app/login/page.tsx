@@ -5,6 +5,9 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
+// Force dynamic rendering to prevent static generation
+export const dynamic = 'force-dynamic'
+
 // Separate component for the search params logic
 function LoginForm() {
   const router = useRouter()

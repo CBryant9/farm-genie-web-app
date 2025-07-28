@@ -5,6 +5,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+// Force dynamic rendering to prevent static generation
+export const dynamic = 'force-dynamic'
+
 export default function SignupPage() {
   const router = useRouter()
   const [firstName, setFirstName] = useState('')
@@ -12,16 +15,21 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
+
+    // Form validation
+    if (!firstName || !lastName || !email || !phoneNumber || !password) {
+      setError('Please fill in all fields')
+      return
+    }
+
+    if (!email.includes('@')) {
+      setError('Please enter a valid email address')
       return
     }
 
@@ -33,33 +41,34 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
-      // Create the user account with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
+      const fullName = `${firstName} ${lastName}`
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
         options: {
           data: {
-            display_name: `${firstName} ${lastName}`,
-            phone: phoneNumber  // Put phone back in the metadata
+            display_name: fullName,
+            phone: phoneNumber
           }
         }
       })
 
-      if (authError) {
-        console.error('Auth error:', authError)
-        if (authError.message.includes('already registered')) {
-          setError('An account with this email already exists. Please try logging in instead.')
+      if (error) {
+        if (error.message.includes('User already registered')) {
+          setError('An account with this email already exists')
+        } else if (error.message.includes('Password should be at least')) {
+          setError('Password must be at least 6 characters long')
+        } else if (error.message.includes('Invalid email')) {
+          setError('Please enter a valid email address')
         } else {
-          setError(`Authentication error: ${authError.message}`)
+          setError(error.message)
         }
         return
       }
 
-      if (authData.user) {
-        console.log('User created successfully:', authData.user)
-        // Redirect to login page after successful signup
-        router.push('/login?message=Account created successfully! Please sign in.')
-      }
+      // Successful signup - redirect to login with success message
+      router.push('/login?message=Account created successfully! Please check your email to confirm your account.')
     } catch (err) {
       console.error('Signup error:', err)
       setError('An unexpected error occurred. Please try again.')
@@ -90,40 +99,42 @@ export default function SignupPage() {
         )}
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="first-name" className="sr-only">
-                First Name
-              </label>
-              <input
-                id="first-name"
-                name="firstName"
-                type="text"
-                autoComplete="given-name"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="First Name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label htmlFor="last-name" className="sr-only">
-                Last Name
-              </label>
-              <input
-                id="last-name"
-                name="lastName"
-                type="text"
-                autoComplete="family-name"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Last Name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                disabled={loading}
-              />
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="first-name" className="sr-only">
+                  First name
+                </label>
+                <input
+                  id="first-name"
+                  name="firstName"
+                  type="text"
+                  autoComplete="given-name"
+                  required
+                  className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                  placeholder="First name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label htmlFor="last-name" className="sr-only">
+                  Last name
+                </label>
+                <input
+                  id="last-name"
+                  name="lastName"
+                  type="text"
+                  autoComplete="family-name"
+                  required
+                  className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                  placeholder="Last name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
             </div>
             <div>
               <label htmlFor="email-address" className="sr-only">
@@ -135,7 +146,7 @@ export default function SignupPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -144,7 +155,7 @@ export default function SignupPage() {
             </div>
             <div>
               <label htmlFor="phone-number" className="sr-only">
-                Phone Number
+                Phone number
               </label>
               <input
                 id="phone-number"
@@ -152,8 +163,8 @@ export default function SignupPage() {
                 type="tel"
                 autoComplete="tel"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Phone Number"
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Phone number"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 disabled={loading}
@@ -169,27 +180,10 @@ export default function SignupPage() {
                 type="password"
                 autoComplete="new-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label htmlFor="confirm-password" className="sr-only">
-                Confirm Password
-              </label>
-              <input
-                id="confirm-password"
-                name="confirm-password"
-                type="password"
-                autoComplete="new-password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Confirm Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading}
               />
             </div>
